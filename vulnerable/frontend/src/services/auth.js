@@ -1,0 +1,19 @@
+import api from './api';
+
+export const login = async (username, password) => {
+  const formData = new URLSearchParams();
+  formData.append('username', username);
+  formData.append('password', password);
+  
+  const response = await api.post('/login', formData, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  });
+  return response.data;
+};
+
+export const getMe = async () => {
+  const response = await api.get('/me');
+  return response.data;
+};

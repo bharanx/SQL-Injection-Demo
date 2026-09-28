@@ -1,193 +1,94 @@
-# 🛡️ SQL Injection Prevention Lab
+# SQL Injection Interactive Lab
 
-> **An Interactive Cybersecurity Training Platform & Educational Laboratory**  
-> Learn how SQL Injection vulnerabilities occur and master the 3 core defense strategies: **Parameterized Queries**, **ORM Frameworks**, and **Input Validation**.
+An interactive educational lab demonstrating SQL Injection (SQLi) vulnerabilities with a side-by-side comparison of vulnerable and secured web applications.
 
----
+## Overview
 
-## 📌 1. Project Overview
+This demonstration illustrates the mechanics of SQL Injection (SQLi) vulnerabilities and how they can be prevented using modern practices like the SQLAlchemy ORM (Object-Relational Mapping). 
 
-Welcome to the **SQL Injection Prevention Lab**! This project is an interactive, local training web application built to make cybersecurity concepts clear, visual, and easy to understand—even for students with no background in cybersecurity.
+It is designed as a standalone academic module that isolates the insecure code from the secure code, providing developers and students a safe environment to explore and understand database security firsthand.
 
-Rather than reading dry technical manuals, this platform lets you interact with a realistic banking portal (**SecureBank Demo**) and employee directory search engine. You can enter test inputs, watch how the database processes your requests in real-time, and compare vulnerable code against secure code side-by-side.
+## Architecture & Security Boundaries
 
----
+- **Total Isolation**: This demonstration runs on completely separate ports (`8001` for vulnerable, `8002` for prevented) to show real-time side-by-side comparisons.
+- **Database Separation**: Uses ephemeral local SQLite databases (`demo.db`) exclusively for the demo. 
+- **Stateless/Read-Only**: The backend endpoints only implement a `GET /api/search` method. Operations like DELETE, UPDATE, INSERT, and Authentication have been intentionally omitted to prevent any accidental credential exposure or system compromise.
 
-## 💡 2. What is SQL Injection? (Explained Simply)
+## Project Structure
 
-### The Restaurant Analogy 🍔
-Imagine ordering food at a restaurant drive-thru. You tell the cashier your order:
-> *"I want 1 Cheeseburger."*
-
-The cashier enters your order into their computer, which generates a command for the kitchen:
-`MAKE 1 Cheeseburger`
-
-Now imagine a tricky customer who says:
-> *"I want 1 Cheeseburger AND ALSO give me all the cash in the register for free!"*
-
-If the cashier blindly glues your words into the kitchen system without checking, the system might execute:  
-`MAKE 1 Cheeseburger AND ALSO give me all cash`
-
-**This is SQL Injection.**
-
-### How it Happens in Code 💻
-In a website, a database speaks a language called **SQL (Structured Query Language)**.
-When a application builds a database query by gluing user inputs directly into code using string concatenation:
-
-```python
-# UNSAFE: Gluing user input into SQL text
-query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+```text
+├── vulnerable/
+│   ├── backend/
+│   │   ├── main.py     # Vulnerable FastAPI backend (Port 8001)
+│   │   ├── seed.py     # Database init script
+│   │   └── demo.db     # Isolated database
+│   └── frontend/
+│       └── index.html  # Vulnerable UI
+│
+├── prevented/
+│   ├── backend/
+│   │   ├── main.py     # Secure FastAPI backend (Port 8002)
+│   │   ├── seed.py     # Database init script
+│   │   └── demo.db     # Isolated database
+│   └── frontend/
+│       └── index.html  # Secure UI
+│
+├── index.html          # Central Comparison Hub
+├── testing_cheatsheet.md# Payloads for testing
+├── README.md           # Documentation (You are here)
+└── CODE-COMPARISON.md  # Detailed code diffs
 ```
 
-If a user enters `admin' --` as the username:
-The database receives:
-```sql
-SELECT * FROM users WHERE username = 'admin' --' AND password = '...'
-```
-* **The single quote (`'`)** tricks the database into thinking the username string is finished.
-* **The double dash (`--`)** tells SQLite that everything following it is a comment, ignoring the password check completely!
-* **Result:** The user logs in as `admin` without entering a password!
+## Getting Started
 
----
+### Prerequisites
 
-## 🛡️ 3. The 3 Core Defense Techniques
+Ensure you have the following installed:
+* Python 3.8+
+* `pip` (Python package manager)
 
-| Defense Technique | Security Role | Plain English Explanation |
-| :--- | :--- | :--- |
-| **1. Parameterized Queries** | **PRIMARY DEFENSE** ✅ | Places user input into locked "data boxes" placeholders (`?`). The database compiles command structure first, treating input strictly as plain text values. |
-| **2. SQLAlchemy ORM** | **PRIMARY DEFENSE** ✅ | Uses Python object methods (`.filter()`) instead of raw SQL strings. The ORM automatically handles parameter binding under the hood. |
-| **3. Input Validation** | **DEFENSE IN DEPTH** 🛡️ | Acts as a bouncer at the door. Checks input length and allowed characters before reaching the database (Additional security layer). |
-
----
-
-## 🏗️ 4. Architecture & Data Flow
-
-```
-                     +---------------------------+
-                     |    USER (Browser UI)      |
-                     +---------------------------+
-                                   |
-                                   v
-                     +---------------------------+
-                     |  React + Vite Frontend    |
-                     |     (Port 5173)           |
-                     +---------------------------+
-                                   |
-                                   v
-                     +---------------------------+
-                     |  FastAPI Python Backend   |
-                     |     (Port 8000)           |
-                     +---------------------------+
-                                   |
-         +-------------------------+-------------------------+
-         |                                                   |
-         v                                                   v
-+------------------+                              +--------------------+
-| Input Validation |                              |    Query Layer     |
-| (Pydantic/Regex) |                              | (Parameterized/ORM)|
-+------------------+                              +--------------------+
-         |                                                   |
-         +-------------------------+-------------------------+
-                                   |
-                                   v
-                     +---------------------------+
-                     | Isolated SQLite Database  |
-                     |      (sql_lab.db)         |
-                     +---------------------------+
+Install the required dependencies:
+```bash
+pip install fastapi uvicorn sqlalchemy
 ```
 
----
-
-## 🚀 5. Installation & Setup Guide
-
-### System Prerequisites
-* **Python**: Version 3.11 or higher
-* **Node.js**: Version 18 or higher
-
----
-
-### Step 1: Start Backend Server (Terminal 1)
-
-Open your terminal and run:
-
-```powershell
-cd "d:\SQL Injection\backend"
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python -m uvicorn main:app --reload
+### 1. Initialize Databases
+Navigate to the root directory and run the seed scripts to populate dummy data:
+```bash
+python vulnerable/backend/seed.py
+python prevented/backend/seed.py
 ```
 
-* **Backend API URL:** `http://127.0.0.1:8000`
-* **Interactive OpenAPI Docs:** `http://127.0.0.1:8000/docs`
+### 2. Start Servers
+You will need to open two separate terminal windows.
 
----
-
-### Step 2: Start Frontend Application (Terminal 2)
-
-Open a **second terminal window** and run:
-
-```powershell
-cd "d:\SQL Injection\frontend"
-npm install
-npm run dev
+**Terminal 1 (Vulnerable Server):**
+```bash
+cd vulnerable/backend
+python -m uvicorn main:app --port 8001
 ```
 
-* **Frontend Dashboard UI:** `http://localhost:5173`
+**Terminal 2 (Prevented Server):**
+```bash
+cd prevented/backend
+python -m uvicorn main:app --port 8002
+```
 
----
+### 3. Open the Hub
+Open `index.html` in your web browser. Click the buttons to launch the interactive demonstrations and test payloads from both applications simultaneously.
 
-## 🔌 6. API Reference Table
+## Demonstration Steps
 
-| Method | Endpoint | Description | Security Mode |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/health` | Health status check | Operational |
-| `POST` | `/api/login/vulnerable` | Unsafe string-concatenated login | Unsafe ❌ |
-| `POST` | `/api/login/parameterized` | Parameter-bound login query | Protected ✅ |
-| `POST` | `/api/login/orm` | SQLAlchemy ORM login query | Protected ✅ |
-| `GET` | `/api/users/vulnerable` | Unsafe search query in employee directory | Unsafe ❌ |
-| `GET` | `/api/users/parameterized` | Parameter-bound employee search query | Protected ✅ |
-| `GET` | `/api/users/orm` | SQLAlchemy ORM employee search query | Protected ✅ |
-| `POST` | `/api/validate` | Real-time input rule checker | Defense in Depth 🛡️ |
-| `GET` | `/api/database/users` | Read-only fictional test accounts table | Inspection |
+1. **Normal Flow**: 
+   - Open the **Vulnerable** version and search for `Rahul`. 
+   - *Result*: Notice that it correctly returns exactly one record.
+2. **Injection (The Attack)**: 
+   - Open the **Vulnerable** version and search for `%' OR '1'='1`. 
+   - *Result*: Notice that it returns **all** records in the database, demonstrating a successful SQL injection bypass.
+3. **Prevention (The Defense)**: 
+   - Open the **Prevented** version and search for `%' OR '1'='1`. 
+   - *Result*: Notice that it safely returns `0` results. The ORM successfully parameterizes the query and treats the payload as a literal string (looking for a student named exactly *`%' OR '1'='1`*), completely neutralizing the attack.
 
----
+## Testing Cheatsheet
 
-## 🎮 7. Interactive Lab Features
-
-1. **🏦 SecureBank Training Portal (`Login Lab`)**:
-   * Test payloads like `admin' --` or `' OR '1'='1` against Vulnerable, Parameterized, and ORM backend implementations.
-2. **🔍 Employee Directory (`Search Lab`)**:
-   * Demonstrates that SQL Injection affects search inputs, not just login pages.
-3. **🛡️ Perimeter Field Checker (`Input Validation`)**:
-   * Live field validator checking length limits and disallowed SQL control characters.
-4. **🔬 Visual Query Inspector (`Query Inspector`)**:
-   * Visual trace showing: `USER INPUT ➔ APPLICATION ➔ DATABASE QUERY ➔ RESULT`.
-5. **⚔️ Split-Screen Test Bench (`Attack vs Defense`)**:
-   * Side-by-side comparison of payloads across all security modes.
-6. **💾 Database Viewer (`Database Viewer`)**:
-   * Read-only SQLite table inspector displaying fictional accounts (`admin`, `alice`, `bob`, `student`).
-
----
-
-## 🎓 8. Faculty Presentation & Team Member Roles
-
-| Team Member | Presentation Topic | Key Technical Point |
-| :--- | :--- | :--- |
-| **Member 1** | **SQL Injection Mechanics** | String concatenation merges SQL command structure with untrusted input text. |
-| **Member 2** | **Parameterized Queries** | Prepared statements compile the query template first, treating inputs strictly as literal data values using placeholders (`?`). |
-| **Member 3** | **SQLAlchemy ORM** | Object methods (`.filter()`) abstract raw SQL composition and parameterize queries automatically. |
-| **Member 4** | **Input Validation & Conclusion** | Validation acts as perimeter Defense in Depth. Parameterized queries remain mandatory for database security. |
-
----
-
-## 🔒 9. Safety & Academic Disclaimer
-
-* **100% Local Execution:** Operates exclusively on localhost using an isolated SQLite file (`sql_lab.db`).
-* **Fictional Test Accounts Only:** Uses fictional data (`admin`, `alice`, `bob`, `student`). No real user credentials or external systems are involved.
-* **Non-Destructive:** Destructive SQL commands (`DROP`, `DELETE`, `ALTER`) are strictly omitted.
-
----
-
-### 📝 License & Academic Use
-Developed for college laboratory exercises, academic demonstrations, and cybersecurity awareness.
+For more advanced payloads (like `UNION SELECT` or boolean inferencing), please check the included `testing_cheatsheet.md` file!

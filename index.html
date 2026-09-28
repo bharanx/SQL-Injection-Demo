@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Injection — Secure Coding Demonstration</title>
+    <style>
+        :root {
+            --primary: #0F2B5B;
+            --secondary: #D4AF37;
+            --bg-color: #F8F9FA;
+            --text-color: #333333;
+            --card-bg: #FFFFFF;
+            --border-color: #E2E8F0;
+            --danger: #DC3545;
+            --success: #10B981;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--secondary);
+        }
+        main {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        .code-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+        .code-box {
+            background-color: #1E293B;
+            color: #E2E8F0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            border-top: 4px solid var(--border-color);
+        }
+        .code-box.vulnerable { border-top-color: var(--danger); }
+        .code-box.prevented { border-top-color: var(--success); }
+        
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: center;
+        }
+        a.btn {
+            text-decoration: none;
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            transition: opacity 0.2s;
+        }
+        a.btn:hover { opacity: 0.9; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        
+        .concept-flow {
+            background-color: #F1F5F9;
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 style="margin: 0; font-size: 2rem;">SQL Injection — Secure Coding Demonstration</h1>
+        <p style="margin-top: 0.5rem; font-size: 1.1rem; color: #cbd5e1;">SIIT Academic Security Training Module</p>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>1. What is SQL Injection?</h2>
+            <p>SQL Injection (SQLi) is a critical vulnerability that occurs when an application improperly includes untrusted data in a database query. By inserting malicious SQL syntax into an input field (like a search box), an attacker can manipulate the query structure to bypass authentication, expose hidden data, or even destroy the database.</p>
+        </div>
+
+        <div class="card">
+            <h2>2. What is wrong with the vulnerable code?</h2>
+            <p>The vulnerable application constructs a SQL query by directly embedding the user's search string via formatting/concatenation. The database engine cannot distinguish between the developer's intended SQL commands and the user's input, treating the injected payload as executable code.</p>
+            
+            <div class="concept-flow">
+                Raw SQL + User Input directly incorporated &rarr; Executed by Database
+            </div>
+            
+            <p>If a user types <code>a%' OR '1'='1</code>, the query becomes:<br>
+            <code>SELECT * FROM students WHERE name LIKE '%a%' OR '1'='1%'</code><br>
+            This forces the database to evaluate <code>1=1</code> (which is always true), returning all records and bypassing the intended search logic.</p>
+        </div>
+
+        <div class="card">
+            <h2>3. Secure Coding Modification</h2>
+            <p>The secure version utilizes <strong>SQLAlchemy ORM</strong> (Object-Relational Mapping). ORMs and parameterized queries separate the query structure from the user data.</p>
+            
+            <div class="concept-flow">
+                Validated Input &rarr; Parameterized ORM Query &rarr; Executed by Database
+            </div>
+            
+            <p>When the database executes the parameterized query, the input is strictly treated as a literal string value. Even if the user inputs <code>' OR '1'='1</code>, the database simply searches for a student whose literal name contains those exact characters, rendering the injection harmless.</p>
+        </div>
+
+        <div class="card">
+            <h2>4. Before vs After Comparison</h2>
+            
+            <div class="code-container">
+                <div>
+                    <h3 style="color: var(--danger);">BEFORE: Vulnerable Code</h3>
+                    <div class="code-box vulnerable">
+<pre>@router.get("/students", response_model=List[StudentProfile])
+def list_students(q: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(Student)
+    if q:
+        # ❌ VULNERABLE: Direct string interpolation bypasses ORM
+        from sqlalchemy import text
+        raw_sql = f"(students.name LIKE '%{q}%' OR students.register_number LIKE '%{q}%')"
+        
+        # EXECUTES MALICIOUS PAYLOAD
+        query = query.filter(text(raw_sql))
+    
+    return query.all()
+</pre>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 style="color: var(--success);">AFTER: Prevented Code</h3>
+                    <div class="code-box prevented">
+<pre>@router.get("/students", response_model=List[StudentProfile])
+def list_students(q: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(Student)
+    if q:
+        # ✅ SECURE: ORM Parameterization
+        query = query.filter(or_(
+            Student.name.ilike(f"%{q}%"),
+            Student.register_number.ilike(f"%{q}%")
+        ))
+    
+    return query.all()
+</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>5. Demonstration Environments</h2>
+            <p>Test the theory by interacting with the complete isolated demonstration environments below. Log in as a Teacher (<code>EMP001</code> / <code>teacher123</code>), navigate to <strong>Student Management</strong>, and try searching for a normal name like <code>Rahul</code>, and then test the SQL injection payload <code>%' OR '1'='1</code>.</p>
+            
+            <div class="btn-group">
+                <a href="http://localhost:8001" class="btn btn-danger" target="_blank">Open Vulnerable Portal</a>
+                <a href="http://localhost:8002" class="btn btn-success" target="_blank">Open Prevented Portal</a>
+                <a href="http://localhost:5173" class="btn" style="background-color: var(--primary); color: white;" target="_blank">Open Main Portal</a>
+            </div>
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: #64748b;">Note: The vulnerable portal is served on port 8001, prevented on port 8002, and main on port 5173/8000.</p>
+        </div>
+    </main>
+
+</body>
+</html>
